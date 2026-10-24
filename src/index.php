@@ -12,9 +12,9 @@ if (parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)==='/health') {
 }
 $_SESSION['csrf'] ??= bin2hex(random_bytes(32));
 $entities = [
- 'classes'=>['title'=>'Lớp học','fields'=>['name'=>'Tên lớp']],
- 'students'=>['title'=>'Sinh viên','fields'=>['code'=>'Mã sinh viên','name'=>'Họ tên','email'=>'Email','class_id'=>'Lớp']],
- 'grades'=>['title'=>'Điểm số','fields'=>['student_id'=>'Sinh viên','subject'=>'Môn học','score'=>'Điểm (0–10)']]
+ 'classes'=>['title'=>'Lớp học','nav'=>'Thêm lớp học','fields'=>['name'=>'Tên lớp']],
+ 'students'=>['title'=>'Sinh viên','nav'=>'Thêm sinh viên','fields'=>['code'=>'Mã sinh viên','name'=>'Họ tên','email'=>'Email','class_id'=>'Lớp']],
+ 'grades'=>['title'=>'Điểm số','nav'=>'Cập nhật điểm số','fields'=>['student_id'=>'Sinh viên','subject'=>'Môn học','score'=>'Điểm (0–10)']]
 ];
 $page = $_GET['page'] ?? 'students';
 if (!isset($entities[$page])) { http_response_code(404); exit('Không tìm thấy trang'); }
@@ -58,7 +58,7 @@ $rows=$db->query("SELECT * FROM `$page` ORDER BY id DESC")->fetchAll();
 ?>
 <!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Quản lý sinh viên</title>
 <style>body{font:16px system-ui;margin:0;background:#f1f5f9;color:#172554}header{background:#172554;color:white;padding:24px}main{max-width:1100px;margin:24px auto;padding:0 18px}nav{display:flex;gap:12px;margin-bottom:24px}a{color:#1d4ed8}nav a,button{padding:10px 16px;border:0;border-radius:6px;background:#2563eb;color:white;text-decoration:none;cursor:pointer}section{background:white;padding:22px;border-radius:12px;margin-bottom:24px;overflow:auto}form.editor{display:flex;flex-wrap:wrap;gap:16px;align-items:end}label{display:grid;gap:6px}input,select{padding:10px;border:1px solid #94a3b8;border-radius:5px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #ddd}.inline{display:inline}button.delete{background:#b91c1c;padding:6px 12px}.error{color:#b91c1c}.success{color:#15803d}</style>
-<header><h1>Quản lý sinh viên</h1><div>Bài thực hành triển khai hệ thống • PHP + MySQL + Docker Compose</div></header><main><nav><?php foreach($entities as $key=>$entity): ?><a href="?page=<?=h($key)?>"><?=h($entity['title'])?></a><?php endforeach ?></nav>
+<header><h1>Quản lý sinh viên</h1><div>Bài thực hành triển khai hệ thống • PHP + MySQL + Docker Compose</div></header><main><nav><?php foreach($entities as $key=>$entity): ?><a href="?page=<?=h($key)?>"><?=h($entity['nav'])?></a><?php endforeach ?></nav>
 <?php if($error): ?><p class="error"><?=h($error)?></p><?php endif ?>
 <?php if(isset($_GET['saved'])): ?><p class="success">Thao tác thành công.</p><?php endif ?>
 <section><h2><?= $edit?'Sửa':'Thêm' ?> <?=h($meta['title'])?></h2><form method="post" class="editor"><input type="hidden" name="csrf" value="<?=h($_SESSION['csrf'])?>"><input type="hidden" name="id" value="<?=h($edit['id'] ?? 0)?>">
