@@ -11,7 +11,7 @@ Chưa triển khai Nginx, Prometheus/Grafana, Loki/Promtail hoặc báo cáo ho�
 | `src/index.php` | Giao diện CRUD, kiểm tra dữ liệu, PDO prepared statements, CSRF, `/health` |
 | `db/init.sql` | Tạo 3 bảng, khóa ngoại, dữ liệu mẫu, giới hạn quyền DB |
 | `Dockerfile` | PHP Apache, PDO MySQL, web chạy bằng www-data ở cổng 8080 |
-| `compose.yaml` | Khởi chạy web, MySQL, phpMyAdmin; mạng riêng và volume DB |
+| `compose.yaml` | Khởi chạy web, MySQL, phpMyAdmin; frontend xuất cổng, backend riêng và volume DB |
 | `.env.example` | Mẫu cấu hình, không chứa mật khẩu thật |
 | `scripts/setup.ps1` | Tạo `.env` với hai mật khẩu ngẫu nhiên khác nhau |
 | `.gitignore`, `.dockerignore` | Loại mật khẩu và dữ liệu không cần thiết |
@@ -32,8 +32,14 @@ git --version
 
 Máy đã kiểm tra: Windows 10 Pro 64-bit, RAM 7.9 GiB; có Docker CLI 26.1.4,
 Compose 2.27.1 và Git. Docker Engine chưa chạy tại thời điểm kiểm tra.
-Chưa xác minh CPU/WSL2 hoặc khả năng chạy container Linux thành công.
+Đã khởi động Docker Engine Linux và chạy thành công cả 3 container ngày 24/10/2026.
+Chưa xác minh chi tiết CPU/phiên bản WSL2.
 Không cần cài PHP hoặc MySQL trực tiếp trên Windows.
+
+Kết quả kiểm tra thực tế: Compose hợp lệ; MySQL healthy; phpMyAdmin HTTP 200;
+PHP lint thành công; web chạy UID 33 (www-data); script smoke PASS cho tạo
+lớp/sinh viên/điểm, cập nhật điểm, chặn điểm sai, chặn xóa lớp đang có sinh viên,
+và xóa dữ liệu thử. Chưa kiểm tra giao diện bằng trình duyệt hoặc thử restart giữ dữ liệu.
 
 Mở Docker Desktop từ Start, đợi Engine chạy, dùng Linux containers. Kiểm tra:
 
@@ -146,6 +152,14 @@ Thực hành theo thứ tự:
 4. Thử nhập điểm `11`: bị chặn. Trùng mã sinh viên: có thông báo lỗi.
 5. Thử xóa lớp đang có sinh viên: bị chặn bởi khóa ngoại.
 6. Xóa điểm thử, xóa sinh viên thử, rồi xóa lớp thử: thành công.
+
+Có thể chạy kiểm tra tự động (tạo rồi xóa dữ liệu có tiền tố TEST):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke.ps1
+```
+
+Thành công: hiện `PASS`. Nếu lỗi giữa chừng, kiểm tra các dòng TEST còn lại trên web.
 
 Kiểm tra lưu dữ liệu: thêm một lớp thử, chạy hai lệnh dưới rồi tải lại trang.
 Lớp vừa thêm phải còn vì DB lưu trên named volume.
