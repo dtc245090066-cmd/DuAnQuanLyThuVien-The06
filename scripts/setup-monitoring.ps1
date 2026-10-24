@@ -27,6 +27,8 @@ GRANT SELECT ON performance_schema.* TO 'metrics'@'%';
 REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'student_app'@'%';
 GRANT SELECT, INSERT, UPDATE, DELETE ON student_management.* TO 'student_app'@'%';
 "@
+docker compose up -d --wait db
+if ($LASTEXITCODE -ne 0) { throw 'Database did not become healthy.' }
 $sql | docker compose exec -T db sh -c 'export MYSQL_PWD=$MYSQL_ROOT_PASSWORD; exec mysql -uroot'
 if ($LASTEXITCODE -ne 0) { throw 'Database setup failed. Start db, wait healthy, then retry.' }
 Write-Host 'Monitoring credentials and least-privilege metrics user configured. Passwords are in .env; do not screenshot.'

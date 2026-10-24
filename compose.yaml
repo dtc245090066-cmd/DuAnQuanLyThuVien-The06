@@ -1,6 +1,7 @@
 name: student-management
 include:
   - compose.monitoring.yaml
+  - compose.logging.yaml
 services:
   nginx:
     image: nginxinc/nginx-unprivileged:1.28-alpine
@@ -17,6 +18,11 @@ services:
     security_opt: ["no-new-privileges:true"]
     mem_limit: 96m
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   web:
     build: .
     environment:
@@ -37,6 +43,11 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   db:
     image: mysql:8.4
     environment:
@@ -56,6 +67,11 @@ services:
       retries: 20
       start_period: 40s
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   phpmyadmin:
     image: phpmyadmin:5.2-apache
     ports: ["127.0.0.1:8081:80"]
@@ -68,6 +84,11 @@ services:
     networks: [edge, backend]
     mem_limit: 256m
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 networks:
   edge:
   frontend:

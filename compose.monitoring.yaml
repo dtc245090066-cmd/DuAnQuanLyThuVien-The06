@@ -11,6 +11,11 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   grafana:
     image: grafana/grafana:11.6.0
     environment:
@@ -30,6 +35,11 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   blackbox:
     image: prom/blackbox-exporter:v0.26.0
     command: ["--config.file=/etc/blackbox.yml"]
@@ -39,6 +49,11 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   mysql-exporter:
     image: prom/mysqld-exporter:v0.17.2
     command: ["--config.my-cnf=/run/secrets/exporter.cnf", "--mysqld.address=db:3306"]
@@ -51,6 +66,11 @@ services:
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     privileged: true
@@ -63,6 +83,11 @@ services:
     networks: [monitoring]
     mem_limit: 256m
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 networks:
   monitoring:
     internal: true

@@ -1,0 +1,21 @@
+PASS: Nginx -> PHP -> MySQL health
+PASS: Security header X-Content-Type-Options
+PASS: Security header X-Frame-Options
+PASS: Security header Content-Security-Policy
+PASS: Security header Referrer-Policy
+PASS: Security header Permissions-Policy
+PASS: health, class/student/grade create, grade update, FK protection, invalid score, delete.
+PASS: Prometheus discovered 4 scrape targets
+PASS: All Prometheus targets UP
+PASS: mysql_up = 1
+PASS: probe_success{job="web"} = 1
+PASS: Real container memory series present
+PASS: Grafana database healthy
+PASS: Grafana dashboard provisioned with 8 panels
+PASS: Grafana datasource prometheus healthy
+PASS: Grafana datasource loki healthy
+PASS: LogQL returns data: {project="student-management",service=~"nginx|web"}
+PASS: LogQL returns data: {project="student-management",service="nginx"} | json | __error__="" | status >= 400
+PASS: LogQL returns data: sum by (status) (rate({project="student-management",service="nginx"} | json | __error__="" [5m]))
+PASS: Secrets excluded from Git
+ALL CHECKS PASSED

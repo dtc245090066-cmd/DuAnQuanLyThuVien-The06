@@ -1,222 +1,125 @@
-# Quản lý sinh viên — bài thực hành Docker Compose
+# Quản lý sinh viên — Docker Compose
 
-Đề 2: quản lý sinh viên, lớp và điểm số. PHP 8.3 + MySQL 8.4 + phpMyAdmin 5.2.
-Phạm vi hiện tại: bước 1 (mã nguồn/Git) và bước 2 (web/DB/phpMyAdmin).
-Chưa triển khai Nginx, Prometheus/Grafana, Loki/Promtail hoặc báo cáo hoàn chỉnh.
+Website CRUD sinh viên, lớp và điểm số cho môn Triển khai và Quản trị Hệ thống Phần mềm.
 
-## Cấu trúc và mã nguồn
+## Chạy nhanh
 
-| File | Vai trò |
-|---|---|
-| `src/index.php` | Giao diện CRUD, kiểm tra dữ liệu, PDO prepared statements, CSRF, `/health` |
-| `db/init.sql` | Tạo 3 bảng, khóa ngoại, dữ liệu mẫu, giới hạn quyền DB |
-| `Dockerfile` | PHP Apache, PDO MySQL, web chạy bằng www-data ở cổng 8080 |
-| `compose.yaml` | Khởi chạy web, MySQL, phpMyAdmin; frontend xuất cổng, backend riêng và volume DB |
-| `.env.example` | Mẫu cấu hình, không chứa mật khẩu thật |
-| `scripts/setup.ps1` | Tạo `.env` với hai mật khẩu ngẫu nhiên khác nhau |
-| `.gitignore`, `.dockerignore` | Loại mật khẩu và dữ liệu không cần thiết |
+Mở Docker Desktop (Linux containers), mở PowerShell tại thư mục dự án.
 
-Toàn bộ code nằm trong các file trên, có thể mở bằng VS Code hoặc Notepad.
-
-## Bước 1 — Chuẩn bị và quản lý mã nguồn
-
-### 1.1 Kiểm tra máy
-
-Mở PowerShell tại thư mục dự án:
+Nếu máy hiện tại đã được thiết lập, chỉ cần:
 
 ```powershell
-docker --version
-docker compose version
-git --version
-```
-
-Máy đã kiểm tra: Windows 10 Pro 64-bit, RAM 7.9 GiB; có Docker CLI 26.1.4,
-Compose 2.27.1 và Git. Docker Engine chưa chạy tại thời điểm kiểm tra.
-Đã khởi động Docker Engine Linux và chạy thành công cả 3 container ngày 24/10/2026.
-Chưa xác minh chi tiết CPU/phiên bản WSL2.
-Không cần cài PHP hoặc MySQL trực tiếp trên Windows.
-
-Kết quả kiểm tra thực tế: Compose hợp lệ; MySQL healthy; phpMyAdmin HTTP 200;
-PHP lint thành công; web chạy UID 33 (www-data); script smoke PASS cho tạo
-lớp/sinh viên/điểm, cập nhật điểm, chặn điểm sai, chặn xóa lớp đang có sinh viên,
-và xóa dữ liệu thử. Chưa kiểm tra giao diện bằng trình duyệt hoặc thử restart giữ dữ liệu.
-
-Mở Docker Desktop từ Start, đợi Engine chạy, dùng Linux containers. Kiểm tra:
-
-```powershell
-docker version
-docker info --format '{{.OSType}}'
-wsl --status
-```
-
-Thành công: `docker version` có cả Client và Server; OSType là `linux`.
-Nếu Docker báo lỗi WSL/ảo hóa, ghi lại nguyên văn lỗi trước khi chỉnh hệ thống.
-RAM 8 GB: đóng ứng dụng nặng; chỉ chạy 3 dịch vụ này trước khi thêm giám sát.
-
-### 1.2 Tạo mật khẩu local
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
-```
-
-Script chỉ tạo `.env` khi chưa có, sinh mật khẩu bằng bộ sinh số ngẫu nhiên mật mã.
-Giữ `MYSQL_DATABASE=student_management` và `MYSQL_USER=student_app`, vì SQL khởi tạo
-đang dùng hai tên này. Không đưa `.env` lên GitHub hoặc vào ảnh báo cáo.
-
-### 1.3 Commit và GitHub
-
-Thư mục hiện tại đã có `.git`, không cần `git init` lại. Thư mục khác chưa có Git thì chạy `git init`.
-
-```powershell
-git status
-git add .gitignore .dockerignore .env.example Dockerfile compose.yaml db src scripts README.md docs
-git diff --cached --stat
-git commit -m "chore: initialize student management CRUD and Docker Compose"
-```
-
-Nếu Git yêu cầu danh tính, đặt tên/email thật của bạn cho repository này rồi commit lại:
-
-```powershell
-git config user.name "TEN_CUA_BAN"
-git config user.email "EMAIL_CUA_BAN"
-```
-
-Vào GitHub, tạo repository `student-management-docker` trống (không tạo README sẵn).
-Thay `TEN_GITHUB` dưới đây bằng tài khoản thật:
-
-```powershell
-git branch -M main
-git remote -v
-git remote add origin https://github.com/TEN_GITHUB/student-management-docker.git
-git push -u origin main
-```
-
-Nếu đã có `origin`, kiểm tra URL; chỉ dùng `git remote set-url origin URL_THAT` nếu cần sửa.
-Đăng nhập theo cửa sổ Git Credential Manager, không ghi token vào URL.
-
-Kiểm tra thành công: GitHub hiển thị README và mã nguồn; không có `.env`.
-
-```powershell
-git ls-files .env
-git log --oneline -5
-```
-
-Lệnh đầu không được hiện gì. Commit nền này tách riêng, không tính thay commit 1 của Nginx.
-Các mốc sau: commit 1 Nginx + security headers/HTTPS; commit 2 monitoring;
-commit 3 Loki + Promtail + LogQL. Chưa thực hiện các mốc đó ở bước này.
-
-Ảnh cần chụp: phiên bản công cụ (Client và Server), GitHub có cây file/README,
-lịch sử commit. Không chụp nội dung `.env`.
-
-## Bước 2 — Chạy web, MySQL và phpMyAdmin
-
-### 2.1 Khởi động
-
-Chạy tại thư mục có `compose.yaml`, sau khi Docker Desktop sẵn sàng:
-
-```powershell
-docker compose config --quiet
 docker compose up -d --build
 docker compose ps
 ```
 
-Lần đầu cần Internet để tải image và biên dịch PDO MySQL, có thể mất vài phút.
-MySQL phải healthy rồi web/phpMyAdmin mới chạy. Không dùng `docker compose config`
-đầy đủ để chụp ảnh vì kết quả có thể chứa mật khẩu.
-
-Mở web: http://localhost:8080
-
-Mở phpMyAdmin: http://localhost:8081
-
-Đăng nhập phpMyAdmin với user `student_app`, mật khẩu `MYSQL_PASSWORD` trong `.env`.
-Chỉ đọc mật khẩu trên máy; không dùng tài khoản root cho ứng dụng.
-Tài khoản này được SELECT/INSERT/UPDATE/DELETE trong database `student_management`;
-không được CREATE/DROP bảng. Schema được tạo tự động trong lần khởi tạo DB đầu.
-
-### 2.2 Kiểm tra web và DB
+Nếu clone mới, tạo mật khẩu và tài khoản DB giám sát trước:
 
 ```powershell
-Invoke-RestMethod http://localhost:8080/health
-docker compose ps
-docker compose logs --tail=50 web db phpmyadmin
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\setup-monitoring.ps1
+docker compose up -d --build
 ```
 
-Thành công: health trả `status: ok`, `database: ok`; có 3 dịch vụ đang chạy, DB healthy.
-Trên web thấy hai sinh viên mẫu. Trên phpMyAdmin thấy `classes`, `students`, `grades`.
+Compose 2.20+ hỗ trợ include; đã kiểm tra trên Compose 2.27.1 / Docker Engine 26.1.4.
+Giữ MYSQL_DATABASE=student_management và MYSQL_USER=student_app theo SQL khởi tạo.
+Không commit .env hoặc .secrets. Không thay mật khẩu .env khi sử dụng lại volume DB cũ.
 
-Thực hành theo thứ tự:
+## Truy cập
 
-1. Mục Lớp học: thêm lớp `CNTT03`, sửa thành `CNTT03A`.
-2. Mục Sinh viên: thêm `SV003`, tên tùy chọn, email hợp lệ, chọn `CNTT03A`.
-3. Mục Điểm số: chọn `SV003`, môn `Docker`, điểm `8.5`; sửa điểm thành `9`.
-4. Thử nhập điểm `11`: bị chặn. Trùng mã sinh viên: có thông báo lỗi.
-5. Thử xóa lớp đang có sinh viên: bị chặn bởi khóa ngoại.
-6. Xóa điểm thử, xóa sinh viên thử, rồi xóa lớp thử: thành công.
+| Thành phần | URL | Thông tin |
+|---|---|---|
+| Web qua Nginx | http://localhost:8080 | CRUD lớp, sinh viên, điểm |
+| phpMyAdmin | http://localhost:8081 | student_app / MYSQL_PASSWORD trong .env |
+| Grafana | http://localhost:3000/d/student-management | admin / GRAFANA_ADMIN_PASSWORD trong .env |
+| Prometheus | http://localhost:9090/targets | 4 job UP |
+| Loki | http://localhost:3100/ready | Ready khi khởi động xong |
 
-Có thể chạy kiểm tra tự động (tạo rồi xóa dữ liệu có tiền tố TEST):
+Mật khẩu là giá trị phía sau dấu =, không bao gồm tên biến. Không đưa mật khẩu vào ảnh báo cáo.
+
+## Thành phần và file cấu hình
+
+| File/thư mục | Vai trò |
+|---|---|
+| src/index.php | CRUD, PDO prepared statements, CSRF, escape HTML, /health |
+| Dockerfile | PHP 8.3 + Apache, PDO MySQL, USER www-data |
+| db/init.sql | Ba bảng, khóa ngoại, dữ liệu mẫu và quyền CRUD |
+| compose.yaml | Web/MySQL/phpMyAdmin/Nginx, mạng và persistent volume |
+| nginx/nginx.conf | Reverse proxy, security headers, JSON access log |
+| compose.monitoring.yaml | Prometheus, Grafana, cAdvisor, Blackbox, mysqld_exporter |
+| monitoring/ | Scrape config, HTTP probe, datasource/dashboard tự provision |
+| compose.logging.yaml | Loki và Promtail |
+| logging/ | Loki TSDB filesystem + Promtail Docker discovery |
+| scripts/setup.ps1 | Tạo hai mật khẩu ngẫu nhiên app/root |
+| scripts/setup-monitoring.ps1 | Tạo mật khẩu Grafana/metrics, cấp quyền DB, tạo exporter.cnf |
+| scripts/smoke.ps1 | Kiểm tra CRUD và ràng buộc dữ liệu |
+| scripts/verify-stack.ps1 | Kiểm tra headers, CRUD, metrics, dashboard, datasource, 3 LogQL |
+| docs/deployment-guide.md | Từng tiêu chí, lệnh kiểm tra, ảnh cần chụp, kịch bản demo |
+| docs/logql.md | Ba truy vấn LogQL và cách tạo log minh chứng |
+| docs/report-outline.md | Dàn ý báo cáo tối thiểu 10 trang |
+
+Toàn bộ code nằm trong các file trên. Không cần cài PHP/MySQL trực tiếp trên Windows.
+Sơ đồ và giải thích chi tiết: [hướng dẫn tiêu chí 3–7](docs/deployment-guide.md).
+
+## Kiểm tra
+
+Sau khi khởi động, đợi khoảng một phút cho metrics/log có dữ liệu:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\smoke.ps1
+docker compose config --quiet
+powershell -ExecutionPolicy Bypass -File .\scripts\verify-stack.ps1
+docker stats --no-stream
+git log --oneline -8
 ```
 
-Thành công: hiện `PASS`. Nếu lỗi giữa chừng, kiểm tra các dòng TEST còn lại trên web.
+Không dùng output docker compose config đầy đủ để chụp ảnh: có thể hiện mật khẩu.
+Không khẳng định hoàn tất chỉ dựa vào container Up: phải có mysql_up=1,
+probe_success=1, số liệu container thật, Grafana dashboard có dữ liệu và LogQL trả log.
 
-Kiểm tra lưu dữ liệu: thêm một lớp thử, chạy hai lệnh dưới rồi tải lại trang.
-Lớp vừa thêm phải còn vì DB lưu trên named volume.
+## Các mốc commit theo đề
+
+- Commit 1: Nginx reverse proxy + security headers (chọn security headers, chưa dùng HTTPS).
+- Commit 2: Prometheus/Grafana giám sát container/web/database.
+- Commit 3: Loki/Promtail, ba query LogQL, xác minh hardening và hướng dẫn demo.
+
+Các commit khởi tạo và sửa giao diện trước đó được giữ nguyên.
+
+## Bảo mật và tài nguyên
+
+Web chạy www-data, Nginx non-root + filesystem chỉ đọc; các mạng backend/frontend/monitoring
+là internal. Chỉ các giao diện cần dùng được bind 127.0.0.1. MySQL và exporter không publish cổng.
+Mật khẩu ngẫu nhiên riêng cho root/app/metrics/Grafana; app chỉ CRUD trong một DB,
+metrics không được đọc bảng nghiệp vụ. Có security headers, cap_drop và no-new-privileges.
+Docker logs xoay vòng 10 MB x 3/service; Prometheus/Loki giữ 24h.
+
+Ngoại lệ: cAdvisor privileged và Promtail có Docker socket, quyền cao cần cho demo này;
+mount socket :ro không làm Docker API thành chỉ đọc. Không mở stack lên Internet.
+Promtail đã EOL ngày 02/03/2026, giữ theo đề; triển khai thật nên dùng Grafana Alloy.
+Web demo chưa có đăng nhập/phân quyền. Pin image giúp tái lập, không thay thế việc cập nhật bảo mật.
+
+## Dừng và chạy lại
 
 ```powershell
 docker compose down
-docker compose up -d
+docker compose up -d --build
+docker compose logs --tail=40 nginx web db
+docker compose logs --tail=40 prometheus mysql-exporter cadvisor
+docker compose logs --tail=40 loki promtail grafana
 ```
 
-Trong tab SQL của phpMyAdmin có thể chạy:
+Không dùng down -v nếu muốn giữ dữ liệu. init.sql chỉ chạy khi volume DB trống.
+Nếu di chuyển thư mục, giữ .env/.secrets và chạy lại up để cập nhật bind mount.
+Máy kiểm tra: Windows 10 Pro 64-bit, RAM khoảng 8 GB, Docker Linux VM khoảng 3.77 GiB.
 
-```sql
-SHOW TABLES;
-SELECT s.code, s.name, c.name AS class_name, g.subject, g.score
-FROM students s
-JOIN classes c ON c.id = s.class_id
-LEFT JOIN grades g ON g.student_id = s.id;
-SHOW GRANTS FOR CURRENT_USER;
-```
-
-Ảnh cần chụp: `docker compose ps` với 3 dịch vụ; danh sách sinh viên;
-màn hình lớp học; màn hình điểm sau sửa; phpMyAdmin có 3 bảng và kết quả JOIN;
-health endpoint; thông báo chặn thao tác không hợp lệ; dữ liệu còn sau restart.
-
-### 2.3 Dừng và xử lý lỗi
-
-```powershell
-docker compose stop
-docker compose start
-docker compose logs --tail=100 db
-```
-
-- Không kết nối được Docker pipe: mở Docker Desktop, đợi Server sẵn sàng.
-- Cổng 8080/8081 bị chiếm: đổi cổng bên trái trong `compose.yaml` thành 8090/8091,
-  chạy lại `docker compose up -d`, truy cập cổng mới.
-- DB khởi tạo chậm: xem log DB, chờ healthy; không tải lại liên tục.
-- Đổi mật khẩu trong `.env` sau khi DB đã có volume không tự đổi mật khẩu DB.
-  Khôi phục mật khẩu đúng hoặc đổi bằng SQL quản trị trước khi cập nhật `.env`.
-- `init.sql` chỉ chạy lần đầu khi volume trống. Không dùng `down -v` tùy tiện:
-  tùy chọn `-v` xóa toàn bộ dữ liệu DB của dự án.
-- Lỗi tải image/apt: kiểm tra mạng, Docker Desktop và chạy lại build.
-
-## Biện pháp đã đặt nền
-
-Web chạy www-data, không root; mạng backend internal; DB không publish cổng;
-hai mật khẩu ngẫu nhiên khác nhau; tài khoản ứng dụng chỉ có quyền CRUD;
-prepared statements, encode HTML và CSRF token. phpMyAdmin và MySQL chưa được
-khẳng định chạy non-root. Đây là demo thực hành local, chưa có đăng nhập/phân quyền
-người dùng và chưa có TLS; không mở lên Internet.
-
-## Tài liệu chính thức
+## Tài liệu tham khảo
 
 - https://docs.docker.com/compose/how-tos/startup-order/
+- https://docs.docker.com/reference/compose-file/include/
 - https://hub.docker.com/_/mysql
 - https://hub.docker.com/_/phpmyadmin
+- https://prometheus.io/docs/guides/multi-target-exporter/
+- https://github.com/prometheus/mysqld_exporter
+- https://grafana.com/docs/loki/latest/configure/examples/configuration-examples/
+- https://grafana.com/docs/loki/latest/send-data/promtail/
 
-## Báo cáo dự kiến (ít nhất 10 trang)
-
-Xem `docs/report-outline.md`. Hiện chỉ thu thập minh chứng bước 1–2;
-không ghi các chức năng giám sát/Nginx là đã hoàn thành.
+Báo cáo hoàn chỉnh cần thêm thông tin sinh viên và ảnh chụp thực tế theo hướng dẫn.
