@@ -26,5 +26,5 @@ INSERT INTO students(code,name,email,class_id) VALUES
 INSERT INTO grades(student_id,subject,score) VALUES (1,'Triển khai hệ thống',8.5);
 -- Official MySQL entrypoint creates MYSQL_USER with privileges on this database only.
 -- The default example username is deliberately restricted further to CRUD.
-REVOKE ALL PRIVILEGES ON student_management.* FROM 'student_app'@'%';
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM 'student_app'@'%';
 GRANT SELECT, INSERT, UPDATE, DELETE ON student_management.* TO 'student_app'@'%';

@@ -1,4 +1,6 @@
 name: student-management
+include:
+  - compose.monitoring.yaml
 services:
   nginx:
     image: nginxinc/nginx-unprivileged:1.28-alpine

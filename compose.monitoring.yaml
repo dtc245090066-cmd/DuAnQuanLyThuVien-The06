@@ -1,0 +1,71 @@
+services:
+  prometheus:
+    image: prom/prometheus:v3.2.1
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=24h", "--storage.tsdb.retention.size=512MB"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [edge, monitoring]
+    mem_limit: 384m
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:11.6.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Run scripts/setup-monitoring.ps1}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3000:3000"]
+    networks: [edge, monitoring]
+    mem_limit: 384m
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    restart: unless-stopped
+  blackbox:
+    image: prom/blackbox-exporter:v0.26.0
+    command: ["--config.file=/etc/blackbox.yml"]
+    volumes: ["./monitoring/blackbox.yml:/etc/blackbox.yml:ro"]
+    networks: [monitoring, frontend]
+    mem_limit: 64m
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    restart: unless-stopped
+  mysql-exporter:
+    image: prom/mysqld-exporter:v0.17.2
+    command: ["--config.my-cnf=/run/secrets/exporter.cnf", "--mysqld.address=db:3306"]
+    volumes: ["./.secrets/exporter.cnf:/run/secrets/exporter.cnf:ro"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend, monitoring]
+    mem_limit: 64m
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    restart: unless-stopped
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    privileged: true
+    command: ["--docker_only=true", "--housekeeping_interval=30s"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+    networks: [monitoring]
+    mem_limit: 256m
+    restart: unless-stopped
+networks:
+  monitoring:
+    internal: true
+volumes:
+  prometheus_data:
+  grafana_data:
